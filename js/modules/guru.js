@@ -30,7 +30,7 @@ const GuruModule = {
       </div>
     `;
 
-    // Ambil data Guru dan Pengampu secara simultan
+    // Ambil data Guru dan Pengampu secara bersamaan
     const [resGuru, resPengampu] = await Promise.all([
       apiCall('GET', 'getGuru', null, forceFetch),
       apiCall('GET', 'getPengampu', null, forceFetch)
@@ -43,16 +43,21 @@ const GuruModule = {
       // Peta pencocokan ID Pengampu ke Teks Tampilan Nama/Level
       const pengampuMap = {};
       this.pengampuData.forEach(p => {
-        pengampuMap[p.id_pengampu] = p.nama_pengampu 
+        const valId = String(p.id_pengampu).trim();
+        pengampuMap[valId] = p.nama_pengampu 
           ? `${p.nama_pengampu} (${p.level_yang_diampu})` 
-          : (p.level_yang_diampu || p.id_pengampu);
+          : (p.level_yang_diampu || valId);
       });
 
-      // Format data untuk tabel tampilan
-      const formattedData = this.data.map(g => ({
-        ...g,
-        display_pengampu: g.pengampu ? (pengampuMap[g.pengampu] || g.pengampu) : 'Pusat / Mandiri'
-      }));
+      // Format data untuk tabel tampilan (Mendukung header id_pengampu maupun pengampu)
+      const formattedData = this.data.map(g => {
+        const rawPengampuId = String(g.id_pengampu !== undefined ? g.id_pengampu : (g.pengampu || '')).trim();
+        return {
+          ...g,
+          id_pengampu: rawPengampuId,
+          display_pengampu: rawPengampuId ? (pengampuMap[rawPengampuId] || rawPengampuId) : 'Pusat / Mandiri'
+        };
+      });
 
       const headers = [
         { label: 'ID Guru', key: 'id_guru' },
@@ -86,20 +91,26 @@ const GuruModule = {
       if (resP.status === 'success') this.pengampuData = resP.data;
     }
 
-    // Ambil hanya angka dari ID saat Edit (misal "GUR-001" -> "001")
+    // Ambil hanya angka dari ID saat Edit (misal "GUR-002" -> "002")
     let rawIdNum = '';
     if (isEdit && editItem.id_guru) {
-      rawIdNum = editItem.id_guru.replace(/^GUR-?/i, '');
+      rawIdNum = String(editItem.id_guru).replace(/^GUR-?/i, '');
     }
 
-    // 1. Dropdown Pengampu (Bisa kosong untuk pengampu pusat)
+    // Ambil ID Pengampu saat ini (Toleransi nama properti id_pengampu / pengampu)
+    const currentPengampuId = isEdit 
+      ? String(editItem.id_pengampu !== undefined ? editItem.id_pengampu : (editItem.pengampu || '')).trim()
+      : '';
+
+    // 1. Dropdown Pengampu
     let pengampuOptions = `<option value="">-- Tanpa Pengampu / Pengampu Pusat --</option>`;
     this.pengampuData.forEach(p => {
-      const selected = isEdit && String(editItem.pengampu) === String(p.id_pengampu) ? 'selected' : '';
+      const pId = String(p.id_pengampu).trim();
+      const selected = isEdit && currentPengampuId === pId ? 'selected' : '';
       const labelText = p.nama_pengampu 
         ? `${p.nama_pengampu} (${p.level_yang_diampu})` 
-        : `${p.level_yang_diampu} (${p.id_pengampu})`;
-      pengampuOptions += `<option value="${p.id_pengampu}" ${selected}>${labelText}</option>`;
+        : `${p.level_yang_diampu} (${pId})`;
+      pengampuOptions += `<option value="${pId}" ${selected}>${labelText}</option>`;
     });
 
     // 2. Dropdown Unit
@@ -185,12 +196,16 @@ const GuruModule = {
       return;
     }
 
+    const pengampuVal = document.getElementById('modal_pengampu').value;
+
+    // Payload mengirim id_pengampu dan pengampu agar cocok dengan header spreadsheet
     const payload = {
       id_guru: `GUR-${idNum}`,
       nama_guru: document.getElementById('modal_nama_guru').value,
       unit: document.getElementById('modal_unit').value,
       level: document.getElementById('modal_level').value,
-      pengampu: document.getElementById('modal_pengampu').value,
+      id_pengampu: pengampuVal,
+      pengampu: pengampuVal,
       status_syahada: document.getElementById('modal_status_syahada').value
     };
 
