@@ -1,6 +1,11 @@
 const GuruModule = {
   data: [],
   pengampuData: [],
+  // State Filter & Search
+  searchTerm: '',
+  filterUnit: '',
+  filterLevel: '',
+  filterStatus: '',
 
   init: async function(forceFetch = false) {
     document.getElementById('page-title').textContent = 'Master Guru / Karyawan';
@@ -10,14 +15,25 @@ const GuruModule = {
 
   renderHeader: function() {
     const actionArea = document.getElementById('module-action-area');
+    
+    // Pilihan Filter Dropdown
+    const listUnit = ['PAUD 1', 'PAUD 2', 'SD', 'SMP', 'SMA'];
+    const listLevel = ['1', '2', '3', '4', '5', '6', '7', 'Pusat', 'Tahfidz'];
+    const listStatus = ['Belum', 'Aktif', 'Tidak Aktif'];
+
+    let unitFilterOpts = '<option value="">Semua Unit</option>' + listUnit.map(u => `<option value="${u}">${u}</option>`).join('');
+    let levelFilterOpts = '<option value="">Semua Level</option>' + listLevel.map(l => `<option value="${l}">Level ${l}</option>`).join('');
+    let statusFilterOpts = '<option value="">Semua Status Syahada</option>' + listStatus.map(s => `<option value="${s}">${s}</option>`).join('');
+
+    let buttonsHtml = '';
     if (Auth.isAdmin()) {
-      actionArea.innerHTML = `
+      buttonsHtml = `
         <div class="d-flex flex-wrap gap-2 mb-3">
           <button class="btn btn-primary" onclick="GuruModule.openModal()">
             <i class="bi bi-person-plus me-1"></i> Tambah Guru
           </button>
           <button class="btn btn-warning text-dark fw-bold" onclick="GuruModule.openMutasiModal()">
-            <i class="bi bi-arrow-repeat me-1"></i> Mutasi Massal (Checklist)
+            <i class="bi bi-arrow-repeat me-1"></i> Mutasi Massal
           </button>
           <button class="btn btn-success" onclick="GuruModule.exportExcel()">
             <i class="bi bi-file-earmark-excel me-1"></i> Export Excel
@@ -28,9 +44,42 @@ const GuruModule = {
           </label>
         </div>
       `;
-    } else {
-      actionArea.innerHTML = '';
     }
+
+    // Panel Kotak Pencarian & Dropdown Filter
+    actionArea.innerHTML = `
+      ${buttonsHtml}
+      <div class="card card-body bg-light mb-3 border-0 shadow-sm">
+        <div class="row g-2 align-items-center">
+          <div class="col-md-4">
+            <div class="input-group">
+              <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+              <input type="text" id="search-input" class="form-control" placeholder="Cari Nama / ID Guru / Hafalan..." oninput="GuruModule.handleSearch(this.value)">
+            </div>
+          </div>
+          <div class="col-md-2">
+            <select id="filter-unit" class="form-select" onchange="GuruModule.handleFilterUnit(this.value)">
+              ${unitFilterOpts}
+            </select>
+          </div>
+          <div class="col-md-2">
+            <select id="filter-level" class="form-select" onchange="GuruModule.handleFilterLevel(this.value)">
+              ${levelFilterOpts}
+            </select>
+          </div>
+          <div class="col-md-3">
+            <select id="filter-status" class="form-select" onchange="GuruModule.handleFilterStatus(this.value)">
+              ${statusFilterOpts}
+            </select>
+          </div>
+          <div class="col-md-1 text-end">
+            <button class="btn btn-outline-secondary w-100" title="Reset Filter" onclick="GuruModule.resetFilters()">
+              <i class="bi bi-arrow-counterclockwise"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
   },
 
   loadData: async function(forceFetch = false) {
@@ -59,7 +108,7 @@ const GuruModule = {
           : (p.level_yang_diampu || valId);
       });
 
-      const formattedData = this.data.map(g => {
+      this.formattedData = this.data.map(g => {
         const rawPengampuId = String(g.id_pengampu !== undefined ? g.id_pengampu : (g.pengampu || '')).trim();
         return {
           ...g,
@@ -70,38 +119,85 @@ const GuruModule = {
         };
       });
 
-      const headers = [
-        { label: 'ID Guru', key: 'id_guru' },
-        { label: 'Nama Guru', key: 'nama_guru' },
-        { label: 'Unit', key: 'unit' },
-        { label: 'Level', key: 'level' },
-        { label: 'Pengampu', key: 'display_pengampu' },
-        { label: 'Status Syahada', key: 'status_syahada' },
-        { label: 'Tasmi\'', key: 'tasmi' },
-        { label: 'Hafalan', key: 'keterangan_hafalan' }
-      ];
-
-      TableEngine.renderTable(
-        'table-container',
-        headers,
-        formattedData,
-        'id_guru',
-        'GuruModule.editData',
-        'GuruModule.deleteData',
-        true // Enable Checkbox
-      );
+      this.renderFilteredTable();
     } else {
       mainContent.innerHTML = `<div class="alert alert-danger">Gagal memuat data guru: ${resGuru.message || 'Terjadi kesalahan server'}</div>`;
     }
   },
 
-  // Toggle Check All Checkbox
+  // Logika Filter & Search Kombinasi
+  renderFilteredTable: function() {
+    const filtered = this.formattedData.filter(g => {
+      const matchSearch = !this.searchTerm || 
+        String(g.id_guru).toLowerCase().includes(this.searchTerm) ||
+        String(g.nama_guru).toLowerCase().includes(this.searchTerm) ||
+        String(g.keterangan_hafalan).toLowerCase().includes(this.searchTerm);
+
+      const matchUnit = !this.filterUnit || g.unit === this.filterUnit;
+      const matchLevel = !this.filterLevel || String(g.level) === String(this.filterLevel);
+      const matchStatus = !this.filterStatus || g.status_syahada === this.filterStatus;
+
+      return matchSearch && matchUnit && matchLevel && matchStatus;
+    });
+
+    const headers = [
+      { label: 'ID Guru', key: 'id_guru' },
+      { label: 'Nama Guru', key: 'nama_guru' },
+      { label: 'Unit', key: 'unit' },
+      { label: 'Level', key: 'level' },
+      { label: 'Pengampu', key: 'display_pengampu' },
+      { label: 'Status Syahada', key: 'status_syahada' },
+      { label: 'Tasmi\'', key: 'tasmi' },
+      { label: 'Hafalan', key: 'keterangan_hafalan' }
+    ];
+
+    TableEngine.renderTable(
+      'table-container',
+      headers,
+      filtered,
+      'id_guru',
+      'GuruModule.editData',
+      'GuruModule.deleteData',
+      true
+    );
+  },
+
+  // Handlers Event Listener Filter & Search
+  handleSearch: function(val) {
+    this.searchTerm = val.toLowerCase().trim();
+    this.renderFilteredTable();
+  },
+  handleFilterUnit: function(val) {
+    this.filterUnit = val;
+    this.renderFilteredTable();
+  },
+  handleFilterLevel: function(val) {
+    this.filterLevel = val;
+    this.renderFilteredTable();
+  },
+  handleFilterStatus: function(val) {
+    this.filterStatus = val;
+    this.renderFilteredTable();
+  },
+  resetFilters: function() {
+    this.searchTerm = '';
+    this.filterUnit = '';
+    this.filterLevel = '';
+    this.filterStatus = '';
+
+    document.getElementById('search-input').value = '';
+    document.getElementById('filter-unit').value = '';
+    document.getElementById('filter-level').value = '';
+    document.getElementById('filter-status').value = '';
+
+    this.renderFilteredTable();
+  },
+
   toggleCheckAll: function(source) {
     const checkboxes = document.querySelectorAll('.row-checkbox');
     checkboxes.forEach(cb => cb.checked = source.checked);
   },
 
-  // Modal Khusus Mutasi Massal
   openMutasiModal: async function() {
     const selectedBoxes = document.querySelectorAll('.row-checkbox:checked');
     if (selectedBoxes.length === 0) {
@@ -116,14 +212,12 @@ const GuruModule = {
       if (resP.status === 'success') this.pengampuData = resP.data;
     }
 
-    // Dropdown Level Baru
     const listLevel = ['1', '2', '3', '4', '5', '6', '7', 'Pusat', 'Tahfidz'];
     let levelOptions = `<option value="">-- Tetap / Tidak Diubah --</option>`;
     listLevel.forEach(l => {
       levelOptions += `<option value="${l}">Level ${l}</option>`;
     });
 
-    // Dropdown Pengampu Baru
     let pengampuOptions = `<option value="">-- Tetap / Tidak Diubah --</option>`;
     pengampuOptions += `<option value="">Pusat / Mandiri (Tanpa Pengampu)</option>`;
     this.pengampuData.forEach(p => {
@@ -158,7 +252,6 @@ const GuruModule = {
     modal.show();
   },
 
-  // Simpan Mutasi Massal
   saveMutasiMassal: async function(selectedIds) {
     const newLevel = document.getElementById('mutasi_level').value;
     const newPengampu = document.getElementById('mutasi_pengampu').value;
