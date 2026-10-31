@@ -67,11 +67,12 @@ html, body {
   flex-shrink: 0;
 }
 
-/* PEMBUNGKUS TABEL: Mengunci tinggi pasti & wajib mengaktifkan scrollbar internal */
+/* PEMBUNGKUS TABEL: Disesuaikan agar memberi jarak aman dari taskbar */
 .table-scroll-container {
-  max-height: calc(100vh - 260px) !important;
+  max-height: calc(100vh - 310px) !important; /* Dipendekkan agar baris paling bawah tidak terpotong */
   overflow-y: auto !important;
   border-radius: 0.375rem;
+  margin-bottom: 1rem; /* Jarak aman dari batas bawah layar */
 }
 
 /* Header Hitam Mengunci di Atas Saat Tabel Di-scroll */
