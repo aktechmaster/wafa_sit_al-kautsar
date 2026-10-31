@@ -14,9 +14,9 @@ const TableEngine = {
 
     const isAdmin = Auth.isAdmin();
 
-    // Container tabel dengan batas tinggi responsif sesuai layar
+    // Table responsive yang menyesuaikan sisa tinggi layar secara presisi
     let html = `
-      <div class="table-responsive shadow-sm rounded border bg-white" style="max-height: calc(100vh - 320px); overflow-y: auto; position: relative;">
+      <div class="table-responsive shadow-sm rounded border bg-white flex-grow-1" style="overflow-y: auto; height: 100%;">
         <table class="table table-striped table-hover m-0 align-middle">
           <thead class="table-dark" style="position: sticky; top: 0; z-index: 5;">
             <tr>
