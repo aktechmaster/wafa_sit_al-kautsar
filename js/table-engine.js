@@ -1,15 +1,13 @@
 const TableEngine = {
-  renderTable: function(containerId, headers, data, idKey, editCallback, deleteCallback) {
+  renderTable: function(containerId, headers, data, idKey, editCallback, deleteCallback, enableCheckbox = false) {
     let container = document.getElementById(containerId);
     
-    // Penanganan jika container belum ada di DOM
     if (!container) {
       const mainContent = document.getElementById('main-content');
       if (mainContent) {
         mainContent.innerHTML = `<div id="${containerId}"></div>`;
         container = document.getElementById(containerId);
       } else {
-        console.error(`Container '${containerId}' tidak ditemukan di DOM.`);
         return;
       }
     }
@@ -18,21 +16,26 @@ const TableEngine = {
 
     let html = `
       <div class="table-responsive">
-        <table class="table table-striped table-hover bg-white rounded shadow-sm border">
+        <table class="table table-striped table-hover bg-white rounded shadow-sm border align-middle">
           <thead class="table-dark">
             <tr>
+              ${enableCheckbox && isAdmin ? `<th style="width: 40px;" class="text-center"><input type="checkbox" class="form-check-input" id="check-all" onclick="GuruModule.toggleCheckAll(this)"></th>` : ''}
               ${headers.map(h => `<th>${h.label}</th>`).join('')}
-              ${isAdmin ? `<th>Aksi</th>` : ''}
+              ${isAdmin ? `<th style="width: 140px;">Aksi</th>` : ''}
             </tr>
           </thead>
           <tbody>
     `;
 
     if (!data || data.length === 0) {
-      html += `<tr><td colspan="${headers.length + (isAdmin ? 1 : 0)}" class="text-center py-3 text-muted">Data belum ada</td></tr>`;
+      const totalCol = headers.length + (isAdmin ? 1 : 0) + (enableCheckbox && isAdmin ? 1 : 0);
+      html += `<tr><td colspan="${totalCol}" class="text-center py-4 text-muted">Data belum ada</td></tr>`;
     } else {
       data.forEach(row => {
         html += `<tr>`;
+        if (enableCheckbox && isAdmin) {
+          html += `<td class="text-center"><input type="checkbox" class="form-check-input row-checkbox" value="${row[idKey]}"></td>`;
+        }
         headers.forEach(h => {
           html += `<td>${row[h.key] !== undefined && row[h.key] !== '' ? row[h.key] : '-'}</td>`;
         });
@@ -41,10 +44,10 @@ const TableEngine = {
           html += `
             <td>
               <button class="btn btn-sm btn-warning me-1" onclick="${editCallback}('${row[idKey]}')">
-                <i class="bi bi-pencil"></i> Edit
+                <i class="bi bi-pencil"></i>
               </button>
-              <button class="btn btn-sm btn-danger btn-sm" onclick="${deleteCallback}('${row[idKey]}')">
-                <i class="bi bi-trash"></i> Hapus
+              <button class="btn btn-sm btn-danger" onclick="${deleteCallback}('${row[idKey]}')">
+                <i class="bi bi-trash"></i>
               </button>
             </td>
           `;
