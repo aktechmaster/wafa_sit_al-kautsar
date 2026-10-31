@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - Dashboard Perkuliahan Al-Qur'an</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="bg-light d-flex align-items-center justify-content-center vh-100">
+
+  <div class="card shadow-lg border-0 rounded-4 style-login-card">
+    <div class="card-body p-4 p-md-5">
+      <div class="text-center mb-4">
+        <h4 class="fw-bold text-primary">Perkuliahan Al-Qur'an</h4>
+        <p class="text-muted">Masuk ke Dashboard Sistem</p>
+      </div>
+
+      <div id="alert-msg" class="alert alert-danger d-none" role="alert"></div>
+
+      <form id="login-form">
+        <div class="mb-3">
+          <label class="form-label font-weight-bold">Username</label>
+          <input type="text" id="username" class="form-control" placeholder="Masukkan username" required>
+        </div>
+        <div class="mb-4">
+          <label class="form-label">Password</label>
+          <input type="password" id="password" class="form-control" placeholder="Masukkan password" required>
+        </div>
+        <button type="submit" id="btn-login" class="btn btn-primary w-100 py-2">
+          <span id="login-spinner" class="spinner-border spinner-border-sm me-2 d-none" role="status"></span>
+          Masuk
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script>
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const u = document.getElementById('username').value;
+      const p = document.getElementById('password').value;
+      const alertEl = document.getElementById('alert-msg');
+      const spinner = document.getElementById('login-spinner');
+      
+      alertEl.classList.add('d-none');
+      spinner.classList.remove('d-none');
+
+      try {
+        const res = await apiCall('POST', 'login', { username: u, password: p });
+        if (res.status === 'success') {
+          localStorage.setItem(CONFIG.USER_SESSION_KEY, JSON.stringify(res.user));
+          window.location.href = 'index.html';
+        } else {
+          alertEl.textContent = res.message || 'Login gagal!';
+          alertEl.classList.remove('d-none');
+        }
+      } catch (err) {
+        alertEl.textContent = 'Terjadi kesalahan jaringan atau URL GAS belum dikonfigurasi.';
+        alertEl.classList.remove('d-none');
+      } finally {
+        spinner.classList.add('d-none');
+      }
+    });
+  </script>
+</body>
+</html>
