@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard Admin - Yayasan Perkuliahan Al-Qur'an</title>
+  <!-- Bootstrap 5 CSS & Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <div class="d-flex" id="wrapper">
+    <!-- Sidebar -->
+    <div class="bg-dark-sidebar" id="sidebar-wrapper">
+      <div class="sidebar-heading text-white fw-bold d-flex align-items-center gap-2">
+        <i class="bi bi-book-half fs-4 text-primary"></i>
+        <span>Admin Al-Qur'an</span>
+      </div>
+      <div class="list-group list-group-flush mt-3">
+        <a href="#" class="list-group-item list-group-item-action sidebar-link active" data-module="beranda">
+          <i class="bi bi-speedometer2 me-2"></i> Dashboard
+        </a>
+        <a href="#" class="list-group-item list-group-item-action sidebar-link" data-module="guru">
+          <i class="bi bi-person-badge me-2"></i> Master Guru
+        </a>
+        <a href="#" class="list-group-item list-group-item-action sidebar-link" data-module="pengampu">
+          <i class="bi bi-journal-bookmark me-2"></i> Master Pengampu
+        </a>
+        <a href="#" class="list-group-item list-group-item-action sidebar-link admin-only" data-module="users">
+          <i class="bi bi-people me-2"></i> Master Users
+        </a>
+      </div>
+    </div>
+
+    <!-- Page Content Container -->
+    <div id="page-content-wrapper" class="w-100">
+      <!-- Topbar Navigation -->
+      <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom px-4 py-3">
+        <div class="d-flex align-items-center w-100 justify-content-between">
+          <div class="d-flex align-items-center gap-3">
+            <h5 class="m-0 fw-bold text-secondary" id="page-title">Overview</h5>
+            <button class="btn btn-outline-primary btn-sm" id="btn-refresh" onclick="location.reload()">
+              <i class="bi bi-arrow-clockwise"></i> Refresh Data
+            </button>
+          </div>
+          <div class="d-flex align-items-center gap-3">
+            <div class="text-end me-2">
+              <div class="fw-bold text-dark" id="user-name">Nama User</div>
+              <small class="badge bg-info text-dark" id="user-role">Role</small>
+            </div>
+            <button class="btn btn-outline-danger btn-sm" onclick="Auth.logout()">
+              <i class="bi bi-box-arrow-right"></i> Logout
+            </button>
+          </div>
+        </div>
+      </nav>
+
+      <!-- Main Dashboard Content -->
+      <div class="container-fluid p-4">
+        <!-- Area aksi seperti tombol Tambah Data -->
+        <div id="module-action-area"></div>
+
+        <!-- Dynamic Content (Cards / Table Render Area) -->
+        <div id="main-content">
+          <div id="table-container"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Universal Modal Form (Create / Edit) -->
+  <div class="modal fade" id="formModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="formModalTitle">Form Data</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body" id="formModalBody">
+          <!-- Form fields akan di-generate secara dinamis oleh JS tiap modul -->
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+          <button type="button" class="btn btn-primary" id="btn-save-modal">Simpan Data</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrap 5 Bundle JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+  <!-- Core Scripts -->
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/table-engine.js"></script>
+
+  <!-- Feature Modules -->
+  <script src="js/modules/beranda.js"></script>
+  <script src="js/modules/guru.js"></script>
+  <script src="js/modules/pengampu.js"></script>
+  <script src="js/modules/users.js"></script>
+  
+  <!-- Main Application Router -->
+  <script src="js/app.js"></script>
+</body>
+</html>
