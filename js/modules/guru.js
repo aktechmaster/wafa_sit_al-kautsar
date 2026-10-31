@@ -40,16 +40,18 @@ const GuruModule = {
       this.data = resGuru.data;
       this.pengampuData = resPengampu.status === 'success' ? resPengampu.data : [];
 
-      // Peta pencocokan ID Pengampu ke Nama Level yang Diampu
+      // Peta pencocokan ID Pengampu ke Teks Tampilan Nama/Level
       const pengampuMap = {};
       this.pengampuData.forEach(p => {
-        pengampuMap[p.id_pengampu] = p.level_yang_diampu;
+        pengampuMap[p.id_pengampu] = p.nama_pengampu 
+          ? `${p.nama_pengampu} (${p.level_yang_diampu})` 
+          : (p.level_yang_diampu || p.id_pengampu);
       });
 
-      // Format data untuk tabel (Ubah ID Pengampu menjadi Nama Level)
+      // Format data untuk tabel tampilan
       const formattedData = this.data.map(g => ({
         ...g,
-        nama_pengampu: pengampuMap[g.pengampu] || g.pengampu || '-'
+        display_pengampu: g.pengampu ? (pengampuMap[g.pengampu] || g.pengampu) : 'Pusat / Mandiri'
       }));
 
       const headers = [
@@ -57,7 +59,7 @@ const GuruModule = {
         { label: 'Nama Guru', key: 'nama_guru' },
         { label: 'Unit', key: 'unit' },
         { label: 'Level', key: 'level' },
-        { label: 'Pengampu', key: 'nama_pengampu' },
+        { label: 'Pengampu', key: 'display_pengampu' },
         { label: 'Status Syahada', key: 'status_syahada' }
       ];
 
@@ -78,23 +80,26 @@ const GuruModule = {
     const isEdit = editItem !== null;
     document.getElementById('formModalTitle').textContent = isEdit ? 'Edit Data Guru' : 'Tambah Guru Baru';
 
-    // Pastikan data pengampu sudah termuat
+    // Ambil data pengampu jika belum ada di memori
     if (this.pengampuData.length === 0) {
       const resP = await apiCall('GET', 'getPengampu');
       if (resP.status === 'success') this.pengampuData = resP.data;
     }
 
-    // Ambil hanya angka dari ID saat Edit (misal: "GUR-001" -> "001")
+    // Ambil hanya angka dari ID saat Edit (misal "GUR-001" -> "001")
     let rawIdNum = '';
     if (isEdit && editItem.id_guru) {
       rawIdNum = editItem.id_guru.replace(/^GUR-?/i, '');
     }
 
-    // 1. Dropdown Pengampu (Diambil dari Master Pengampu)
-    let pengampuOptions = `<option value="">-- Pilih Pengampu --</option>`;
+    // 1. Dropdown Pengampu (Bisa kosong untuk pengampu pusat)
+    let pengampuOptions = `<option value="">-- Tanpa Pengampu / Pengampu Pusat --</option>`;
     this.pengampuData.forEach(p => {
       const selected = isEdit && String(editItem.pengampu) === String(p.id_pengampu) ? 'selected' : '';
-      pengampuOptions += `<option value="${p.id_pengampu}" ${selected}>${p.level_yang_diampu} (${p.id_pengampu})</option>`;
+      const labelText = p.nama_pengampu 
+        ? `${p.nama_pengampu} (${p.level_yang_diampu})` 
+        : `${p.level_yang_diampu} (${p.id_pengampu})`;
+      pengampuOptions += `<option value="${p.id_pengampu}" ${selected}>${labelText}</option>`;
     });
 
     // 2. Dropdown Unit
@@ -115,7 +120,7 @@ const GuruModule = {
 
     // 4. Dropdown Status Syahada
     const listStatus = ['Belum', 'Aktif', 'Tidak Aktif'];
-    let statusOptions = '<option value="">-- Pilih Status --</option>';
+    let statusOptions = '<option value="">-- Pilih Status Syahada --</option>';
     listStatus.forEach(s => {
       const selected = isEdit && editItem.status_syahada === s ? 'selected' : '';
       statusOptions += `<option value="${s}" ${selected}>${s}</option>`;
@@ -148,7 +153,7 @@ const GuruModule = {
         </div>
         <div class="mb-3">
           <label class="form-label">Pengampu</label>
-          <select id="modal_pengampu" class="form-select" required>
+          <select id="modal_pengampu" class="form-select">
             ${pengampuOptions}
           </select>
         </div>
@@ -180,10 +185,8 @@ const GuruModule = {
       return;
     }
 
-    const fullId = `GUR-${idNum}`;
-
     const payload = {
-      id_guru: fullId,
+      id_guru: `GUR-${idNum}`,
       nama_guru: document.getElementById('modal_nama_guru').value,
       unit: document.getElementById('modal_unit').value,
       level: document.getElementById('modal_level').value,
