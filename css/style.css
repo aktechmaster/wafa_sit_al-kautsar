@@ -1,0 +1,67 @@
+body {
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  background-color: #f8f9fa;
+  overflow-x: hidden;
+}
+
+/* Sidebar Layout */
+#sidebar-wrapper {
+  min-height: 100vh;
+  width: 250px;
+  background-color: #1e293b;
+  transition: margin 0.25s ease-out;
+}
+
+#sidebar-wrapper .sidebar-heading {
+  padding: 1.5rem 1.25rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+#sidebar-wrapper .list-group-item {
+  background-color: transparent;
+  color: #94a3b8;
+  border: none;
+  padding: 0.9rem 1.5rem;
+  font-weight: 500;
+  border-left: 4px solid transparent;
+}
+
+#sidebar-wrapper .list-group-item:hover,
+#sidebar-wrapper .list-group-item.active {
+  background-color: #0f172a;
+  color: #ffffff;
+  border-left-color: #0d6efd;
+}
+
+/* Stat Cards (Sesuai skema warna Gambar 1) */
+.stat-card {
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  transition: transform 0.2s;
+}
+
+.stat-card:hover {
+  transform: translateY(-3px);
+}
+
+.stat-card.card-blue { background-color: #0d6efd; }
+.stat-card.card-green { background-color: #198754; }
+.stat-card.card-yellow { background-color: #ffc107; color: #000; }
+.stat-card.card-teal { background-color: #0dcaf0; color: #000; }
+
+.stat-card .card-title {
+  font-size: 0.9rem;
+  opacity: 0.9;
+}
+
+.stat-card .card-value {
+  font-size: 2.2rem;
+  font-weight: bold;
+}
+
+/* Login Container */
+.style-login-card {
+  width: 100%;
+  max-width: 400px;
+}
