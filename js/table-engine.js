@@ -14,15 +14,14 @@ const TableEngine = {
 
     const isAdmin = Auth.isAdmin();
 
-    // Table responsive yang menyesuaikan sisa tinggi layar secara presisi
     let html = `
-      <div class="table-responsive shadow-sm rounded border bg-white flex-grow-1" style="overflow-y: auto; height: 100%;">
+      <div class="table-responsive table-scroll-container shadow-sm border bg-white">
         <table class="table table-striped table-hover m-0 align-middle">
-          <thead class="table-dark" style="position: sticky; top: 0; z-index: 5;">
+          <thead class="table-dark">
             <tr>
-              ${enableCheckbox && isAdmin ? `<th style="width: 40px; background-color: #212529; color: #fff; position: sticky; top: 0;" class="text-center"><input type="checkbox" class="form-check-input" id="check-all" onclick="GuruModule.toggleCheckAll(this)"></th>` : ''}
-              ${headers.map(h => `<th style="background-color: #212529; color: #fff; position: sticky; top: 0;">${h.label}</th>`).join('')}
-              ${isAdmin ? `<th style="width: 120px; background-color: #212529; color: #fff; position: sticky; top: 0;">Aksi</th>` : ''}
+              ${enableCheckbox && isAdmin ? `<th style="width: 40px;" class="text-center"><input type="checkbox" class="form-check-input" id="check-all" onclick="GuruModule.toggleCheckAll(this)"></th>` : ''}
+              ${headers.map(h => `<th>${h.label}</th>`).join('')}
+              ${isAdmin ? `<th style="width: 120px;">Aksi</th>` : ''}
             </tr>
           </thead>
           <tbody>
