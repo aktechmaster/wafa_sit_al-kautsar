@@ -36,6 +36,9 @@ const GuruModule = {
           <button class="btn btn-warning text-dark fw-bold" onclick="GuruModule.openMutasiModal()">
             <i class="bi bi-arrow-repeat me-1"></i> Mutasi Massal
           </button>
+          <button class="btn btn-danger fw-bold" onclick="GuruModule.deleteMassal()">
+            <i class="bi bi-trash me-1"></i> Hapus Terpilih
+          </button>
           <button class="btn btn-success" onclick="GuruModule.exportExcel()">
             <i class="bi bi-file-earmark-excel me-1"></i> Export Excel
           </button>
@@ -107,7 +110,6 @@ const GuruModule = {
     }
   },
 
-  // Helper untuk format data tampilan
   rebuildFormattedData: function() {
     const pengampuMap = {};
     this.pengampuData.forEach(p => {
@@ -129,7 +131,6 @@ const GuruModule = {
     });
   },
 
-  // Logika Filter & Search Kombinasi
   renderFilteredTable: function() {
     const filtered = this.formattedData.filter(g => {
       const matchSearch = !this.searchTerm || 
@@ -166,7 +167,6 @@ const GuruModule = {
     );
   },
 
-  // Handlers Event Listener Filter & Search
   handleSearch: function(val) {
     this.searchTerm = val.toLowerCase().trim();
     this.renderFilteredTable();
@@ -200,6 +200,36 @@ const GuruModule = {
   toggleCheckAll: function(source) {
     const checkboxes = document.querySelectorAll('.row-checkbox');
     checkboxes.forEach(cb => cb.checked = source.checked);
+  },
+
+  // Fitur Hapus Massal Guru yang Dicentang
+  deleteMassal: async function() {
+    const selectedBoxes = document.querySelectorAll('.row-checkbox:checked');
+    if (selectedBoxes.length === 0) {
+      alert('Pilih/centang minimal 1 guru yang ingin dihapus!');
+      return;
+    }
+
+    const selectedIds = Array.from(selectedBoxes).map(cb => cb.value);
+
+    if (confirm(`Apakah Anda YAKIN ingin menghapus ${selectedIds.length} data guru yang dicentang? Data yang dihapus tidak dapat dikembalikan.`)) {
+      const res = await apiCall('POST', 'bulkDeleteGuru', { ids: selectedIds });
+
+      if (res.status === 'success') {
+        // Synchronize in-memory data secara instan
+        this.data = this.data.filter(d => !selectedIds.includes(String(d.id_guru)));
+
+        if (typeof AppCache !== 'undefined' && AppCache.set) {
+          AppCache.set('getGuru', { status: 'success', data: this.data });
+        }
+
+        this.rebuildFormattedData();
+        this.renderFilteredTable();
+        alert(res.message);
+      } else {
+        alert(res.message || 'Gagal menghapus data massal');
+      }
+    }
   },
 
   openMutasiModal: async function() {
@@ -256,7 +286,6 @@ const GuruModule = {
     modal.show();
   },
 
-  // Simpan Mutasi Massal secara Instan di Memori Lokal
   saveMutasiMassal: async function(selectedIds) {
     const newLevel = document.getElementById('mutasi_level').value;
     const newPengampu = document.getElementById('mutasi_pengampu').value;
@@ -287,7 +316,6 @@ const GuruModule = {
       const modalInstance = bootstrap.Modal.getInstance(modalEl);
       if (modalInstance) modalInstance.hide();
 
-      // Synchronize in-memory data directly
       this.data.forEach(g => {
         if (selectedIds.includes(String(g.id_guru))) {
           if (newLevel) g.level = newLevel;
@@ -423,7 +451,6 @@ const GuruModule = {
     if (item) this.openModal(item);
   },
 
-  // Simpan Data Individual secara Instan (Memperbarui layar 0ms tanpa fetch ulang)
   saveData: async function(isEdit) {
     const idNum = document.getElementById('modal_id_guru_num').value.trim();
     if (!idNum) {
@@ -462,7 +489,6 @@ const GuruModule = {
       const modalInstance = bootstrap.Modal.getInstance(modalEl);
       if (modalInstance) modalInstance.hide();
 
-      // Synchronize in-memory array directly
       if (isEdit) {
         const index = this.data.findIndex(d => String(d.id_guru) === fullId);
         if (index !== -1) {
@@ -483,7 +509,6 @@ const GuruModule = {
     }
   },
 
-  // Hapus Data secara Instan dari Layar
   deleteData: async function(id_guru) {
     if (confirm(`Apakah Anda yakin ingin menghapus guru ID ${id_guru}?`)) {
       const res = await apiCall('POST', 'deleteGuru', { id_guru: id_guru });
