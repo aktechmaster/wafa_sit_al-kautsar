@@ -16,12 +16,12 @@ const GuruModule = {
           <button class="btn btn-primary" onclick="GuruModule.openModal()">
             <i class="bi bi-person-plus me-1"></i> Tambah Guru
           </button>
-          <button class="btn btn-success" onclick="GuruModule.exportCSV()">
-            <i class="bi bi-file-earmark-excel me-1"></i> Export CSV
+          <button class="btn btn-success" onclick="GuruModule.exportExcel()">
+            <i class="bi bi-file-earmark-excel me-1"></i> Export Excel (.xlsx)
           </button>
-          <label class="btn btn-outline-secondary">
-            <i class="bi bi-file-earmark-arrow-up me-1"></i> Import CSV
-            <input type="file" id="csv-file-input" accept=".csv" style="display: none;" onchange="GuruModule.importCSV(event)">
+          <label class="btn btn-outline-success">
+            <i class="bi bi-file-earmark-arrow-up me-1"></i> Import Excel (.xlsx)
+            <input type="file" id="excel-file-input" accept=".xlsx, .xls" style="display: none;" onchange="GuruModule.importExcel(event)">
           </label>
         </div>
       `;
@@ -187,7 +187,7 @@ const GuruModule = {
           </div>
           <div class="col-md-4 mb-3">
             <label class="form-label">Keterangan Hafalan</label>
-            <input type="text" id="modal_keterangan_hafalan" class="form-control" value="${isEdit ? (editItem.keterangan_hafalan || '') : ''}" placeholder="Contoh: 30 Juz / 5 Juz">
+            <input type="text" id="modal_keterangan_hafalan" class="form-control" value="${isEdit ? (editItem.keterangan_hafalan || '') : ''}" placeholder="Contoh: 30 Juz">
           </div>
         </div>
       </form>
@@ -244,80 +244,81 @@ const GuruModule = {
     }
   },
 
-  // Fitur Export CSV (Excel Friendly)
-  exportCSV: function() {
+  // Fitur Export Excel (.xlsx)
+  exportExcel: function() {
     if (!this.data || this.data.length === 0) {
       alert('Tidak ada data guru untuk diexport.');
       return;
     }
 
-    const headers = ['id_guru', 'nama_guru', 'unit', 'level', 'id_pengampu', 'status_syahada', 'tasmi', 'keterangan_hafalan'];
-    let csvContent = '\uFEFF' + headers.join(',') + '\n'; // Add BOM for Excel UTF-8 support
+    const exportData = this.data.map(g => ({
+      'id_guru': g.id_guru || '',
+      'nama_guru': g.nama_guru || '',
+      'unit': g.unit || '',
+      'level': g.level || '',
+      'id_pengampu': g.id_pengampu !== undefined ? g.id_pengampu : (g.pengampu || ''),
+      'status_syahada': g.status_syahada || '',
+      'tasmi': g.tasmi || '',
+      'keterangan_hafalan': g.keterangan_hafalan || ''
+    }));
 
-    this.data.forEach(row => {
-      const values = headers.map(h => {
-        let val = row[h] !== undefined && row[h] !== null ? String(row[h]) : '';
-        val = val.replace(/"/g, '""');
-        return `"${val}"`;
-      });
-      csvContent += values.join(',') + '\n';
-    });
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Karyawan");
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `Data_Guru_${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    XLSX.writeFile(workbook, `Data_Guru_${new Date().toISOString().slice(0, 10)}.xlsx`);
   },
 
-  // Fitur Import CSV (Mass Import)
-  importCSV: function(event) {
+  // Fitur Import Excel (.xlsx / .xls)
+  importExcel: function(event) {
     const file = event.target.files[0];
     if (!file) return;
 
     const reader = new FileReader();
     reader.onload = async (e) => {
-      const text = e.target.result;
-      const lines = text.split(/\r\n|\n/);
-      if (lines.length < 2) {
-        alert('File CSV kosong atau tidak valid!');
-        return;
-      }
+      try {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
 
-      // Deteksi delimiter (koma atau titik koma)
-      const delimiter = lines[0].includes(';') ? ';' : ',';
-      const headers = lines[0].split(delimiter).map(h => h.trim().replace(/^"|"$/g, ''));
-
-      const importPayload = [];
-      for (let i = 1; i < lines.length; i++) {
-        if (!lines[i].trim()) continue;
-        const currentline = lines[i].split(delimiter).map(cell => cell.trim().replace(/^"|"$/g, ''));
-        let obj = {};
-        headers.forEach((h, index) => {
-          obj[h] = currentline[index] || '';
-        });
-        if (obj.id_guru || obj.nama_guru) {
-          importPayload.push(obj);
+        if (jsonData.length === 0) {
+          alert('File Excel kosong atau tidak valid!');
+          return;
         }
-      }
 
-      if (importPayload.length === 0) {
-        alert('Tidak ada data valid yang bisa diimport.');
-        return;
-      }
+        const importPayload = jsonData.map(row => ({
+          id_guru: String(row.id_guru || row['ID Guru'] || '').trim(),
+          nama_guru: String(row.nama_guru || row['Nama Guru'] || '').trim(),
+          unit: String(row.unit || row['Unit'] || '').trim(),
+          level: String(row.level || row['Level'] || '').trim(),
+          id_pengampu: String(row.id_pengampu || row['ID Pengampu'] || row.pengampu || '').trim(),
+          status_syahada: String(row.status_syahada || row['Status Syahada'] || '').trim(),
+          tasmi: String(row.tasmi || row["Tasmi'"] || row.Tasmi || '').trim(),
+          keterangan_hafalan: String(row.keterangan_hafalan || row['Keterangan Hafalan'] || row.Hafalan || '').trim()
+        })).filter(item => item.id_guru || item.nama_guru);
 
-      if (confirm(`Impor ${importPayload.length} data guru ke Google Sheets?`)) {
-        const res = await apiCall('POST', 'importGuru', importPayload);
-        alert(res.message);
-        if (res.status === 'success') {
-          this.loadData(true);
+        if (importPayload.length === 0) {
+          alert('Tidak ada data guru yang valid dalam file Excel.');
+          return;
         }
+
+        if (confirm(`Impor ${importPayload.length} data guru dari file Excel ke Google Sheets?`)) {
+          const res = await apiCall('POST', 'importGuru', importPayload);
+          alert(res.message);
+          if (res.status === 'success') {
+            this.loadData(true);
+          }
+        }
+      } catch (err) {
+        alert('Gagal membaca file Excel: ' + err.message);
       }
-      event.target.value = ''; // Reset file input
+      event.target.value = '';
     };
 
-    reader.readAsText(file);
+    reader.readAsArrayBuffer(file);
   }
 };
