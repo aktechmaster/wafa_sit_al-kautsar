@@ -1,15 +1,29 @@
-body {
+/* Main Base Layout (Mengunci Layar Utama 100vh) */
+html, body {
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+  overflow: hidden !important; /* Menghapus scrollbar luar browser secara permanen */
   font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   background-color: #f8f9fa;
-  overflow-x: hidden;
+}
+
+/* Overall Wrapper Layout (Sidebar + Content Area) */
+#wrapper {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
 }
 
 /* Sidebar Layout */
 #sidebar-wrapper {
-  min-height: 100vh;
+  height: 100vh;
   width: 250px;
+  flex-shrink: 0;
   background-color: #1e293b;
   transition: margin 0.25s ease-out;
+  overflow-y: auto;
 }
 
 #sidebar-wrapper .sidebar-heading {
@@ -33,7 +47,82 @@ body {
   border-left-color: #0d6efd;
 }
 
-/* Stat Cards (Sesuai skema warna Gambar 1) */
+/* Page Content Wrapper (Sisi Kanan Layar) */
+#page-content-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* Main Topbar Navbar */
+#page-content-wrapper .navbar {
+  flex-shrink: 0;
+}
+
+/* Workspace Utama (Judul, Tombol, Filter, & Tabel) */
+#main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  padding: 1.25rem 1.5rem;
+}
+
+/* Panel Tombol Aksi & Kotak Pencarian/Filter (Mengunci di Atas) */
+#module-action-area {
+  flex-shrink: 0;
+}
+
+/* Container Tabel Dinamis (Memenuhi Sisa Ruang Layar) */
+#table-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+#table-container .table-responsive {
+  flex: 1;
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto !important; /* Hanya mengaktifkan scrollbar di dalam tabel */
+  border-radius: 0.375rem;
+}
+
+/* Sticky Header Tabel (Header Hitam Mengunci saat Di-scroll) */
+#table-container table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background-color: #212529 !important;
+  color: #ffffff !important;
+}
+
+/* Custom Scrollbar Rapi untuk Area Tabel */
+#table-container .table-responsive::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+#table-container .table-responsive::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+#table-container .table-responsive::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+#table-container .table-responsive::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Stat Cards (Sesuai Skema Warna Dashboard) */
 .stat-card {
   border: none;
   border-radius: 8px;
