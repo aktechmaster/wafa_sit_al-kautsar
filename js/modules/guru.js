@@ -16,11 +16,14 @@ const GuruModule = {
           <button class="btn btn-primary" onclick="GuruModule.openModal()">
             <i class="bi bi-person-plus me-1"></i> Tambah Guru
           </button>
+          <button class="btn btn-warning text-dark fw-bold" onclick="GuruModule.openMutasiModal()">
+            <i class="bi bi-arrow-repeat me-1"></i> Mutasi Massal (Checklist)
+          </button>
           <button class="btn btn-success" onclick="GuruModule.exportExcel()">
-            <i class="bi bi-file-earmark-excel me-1"></i> Export Excel (.xlsx)
+            <i class="bi bi-file-earmark-excel me-1"></i> Export Excel
           </button>
           <label class="btn btn-outline-success">
-            <i class="bi bi-file-earmark-arrow-up me-1"></i> Import Excel (.xlsx)
+            <i class="bi bi-file-earmark-arrow-up me-1"></i> Import Excel
             <input type="file" id="excel-file-input" accept=".xlsx, .xls" style="display: none;" onchange="GuruModule.importExcel(event)">
           </label>
         </div>
@@ -84,10 +87,99 @@ const GuruModule = {
         formattedData,
         'id_guru',
         'GuruModule.editData',
-        'GuruModule.deleteData'
+        'GuruModule.deleteData',
+        true // Enable Checkbox
       );
     } else {
       mainContent.innerHTML = `<div class="alert alert-danger">Gagal memuat data guru: ${resGuru.message || 'Terjadi kesalahan server'}</div>`;
+    }
+  },
+
+  // Toggle Check All Checkbox
+  toggleCheckAll: function(source) {
+    const checkboxes = document.querySelectorAll('.row-checkbox');
+    checkboxes.forEach(cb => cb.checked = source.checked);
+  },
+
+  // Modal Khusus Mutasi Massal
+  openMutasiModal: async function() {
+    const selectedBoxes = document.querySelectorAll('.row-checkbox:checked');
+    if (selectedBoxes.length === 0) {
+      alert('Pilih/centang minimal 1 guru yang ingin dimutasi!');
+      return;
+    }
+
+    const selectedIds = Array.from(selectedBoxes).map(cb => cb.value);
+
+    if (this.pengampuData.length === 0) {
+      const resP = await apiCall('GET', 'getPengampu');
+      if (resP.status === 'success') this.pengampuData = resP.data;
+    }
+
+    // Dropdown Level Baru
+    const listLevel = ['1', '2', '3', '4', '5', '6', '7', 'Pusat', 'Tahfidz'];
+    let levelOptions = `<option value="">-- Tetap / Tidak Diubah --</option>`;
+    listLevel.forEach(l => {
+      levelOptions += `<option value="${l}">Level ${l}</option>`;
+    });
+
+    // Dropdown Pengampu Baru
+    let pengampuOptions = `<option value="">-- Tetap / Tidak Diubah --</option>`;
+    pengampuOptions += `<option value="">Pusat / Mandiri (Tanpa Pengampu)</option>`;
+    this.pengampuData.forEach(p => {
+      const pId = String(p.id_pengampu).trim();
+      const labelText = p.nama_pengampu 
+        ? `${p.nama_pengampu} (${p.level_yang_diampu})` 
+        : `${p.level_yang_diampu} (${pId})`;
+      pengampuOptions += `<option value="${pId}">${labelText}</option>`;
+    });
+
+    document.getElementById('formModalTitle').textContent = `Mutasi Massal (${selectedIds.length} Guru Dipilih)`;
+    document.getElementById('formModalBody').innerHTML = `
+      <div class="alert alert-info py-2">
+        <i class="bi bi-info-circle me-1"></i> Anda akan mengubah Level / Pengampu untuk <strong>${selectedIds.length} guru</strong> sekaligus.
+      </div>
+      <form id="form-mutasi">
+        <div class="mb-3">
+          <label class="form-label fw-bold">Level Baru</label>
+          <select id="mutasi_level" class="form-select">${levelOptions}</select>
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-bold">Pengampu Baru</label>
+          <select id="mutasi_pengampu" class="form-select">${pengampuOptions}</select>
+        </div>
+      </form>
+    `;
+
+    const saveBtn = document.getElementById('btn-save-modal');
+    saveBtn.onclick = () => this.saveMutasiMassal(selectedIds);
+
+    const modal = new bootstrap.Modal(document.getElementById('formModal'));
+    modal.show();
+  },
+
+  // Simpan Mutasi Massal
+  saveMutasiMassal: async function(selectedIds) {
+    const newLevel = document.getElementById('mutasi_level').value;
+    const newPengampu = document.getElementById('mutasi_pengampu').value;
+
+    if (!newLevel && newPengampu === "") {
+      alert('Pilih minimal Level Baru atau Pengampu Baru yang ingin diubah!');
+      return;
+    }
+
+    const payload = {
+      ids: selectedIds,
+      level: newLevel,
+      id_pengampu: newPengampu
+    };
+
+    const res = await apiCall('POST', 'bulkMutasiGuru', payload);
+    alert(res.message);
+
+    if (res.status === 'success') {
+      bootstrap.Modal.getInstance(document.getElementById('formModal')).hide();
+      this.loadData(true);
     }
   },
 
@@ -244,7 +336,6 @@ const GuruModule = {
     }
   },
 
-  // Fitur Export Excel (.xlsx)
   exportExcel: function() {
     if (!this.data || this.data.length === 0) {
       alert('Tidak ada data guru untuk diexport.');
@@ -265,11 +356,9 @@ const GuruModule = {
     const worksheet = XLSX.utils.json_to_sheet(exportData);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Karyawan");
-
     XLSX.writeFile(workbook, `Data_Guru_${new Date().toISOString().slice(0, 10)}.xlsx`);
   },
 
-  // Fitur Import Excel (.xlsx / .xls)
   importExcel: function(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -279,14 +368,12 @@ const GuruModule = {
       try {
         const data = new Uint8Array(e.target.result);
         const workbook = XLSX.read(data, { type: 'array' });
-        
         const firstSheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[firstSheetName];
-        
         const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
 
         if (jsonData.length === 0) {
-          alert('File Excel kosong atau tidak valid!');
+          alert('File Excel kosong!');
           return;
         }
 
@@ -301,17 +388,10 @@ const GuruModule = {
           keterangan_hafalan: String(row.keterangan_hafalan || row['Keterangan Hafalan'] || row.Hafalan || '').trim()
         })).filter(item => item.id_guru || item.nama_guru);
 
-        if (importPayload.length === 0) {
-          alert('Tidak ada data guru yang valid dalam file Excel.');
-          return;
-        }
-
-        if (confirm(`Impor ${importPayload.length} data guru dari file Excel ke Google Sheets?`)) {
+        if (confirm(`Impor ${importPayload.length} data guru dari file Excel?`)) {
           const res = await apiCall('POST', 'importGuru', importPayload);
           alert(res.message);
-          if (res.status === 'success') {
-            this.loadData(true);
-          }
+          if (res.status === 'success') this.loadData(true);
         }
       } catch (err) {
         alert('Gagal membaca file Excel: ' + err.message);
