@@ -16,6 +16,7 @@ const Auth = {
       return;
     }
     this.renderUserInfo(user);
+    this.applyRoleRestrictions();
   },
 
   renderUserInfo: function(user) {
@@ -23,6 +24,14 @@ const Auth = {
     const roleEl = document.getElementById('user-role');
     if (nameEl) nameEl.textContent = user.nama_user || 'User';
     if (roleEl) roleEl.textContent = user.role || 'Readonly';
+  },
+
+  applyRoleRestrictions: function() {
+    const isAdmin = this.isAdmin();
+    const adminOnlyElements = document.querySelectorAll('.admin-only');
+    adminOnlyElements.forEach(el => {
+      el.style.display = isAdmin ? '' : 'none';
+    });
   },
 
   logout: function() {
