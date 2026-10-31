@@ -1,6 +1,7 @@
 const GuruModule = {
   data: [],
   pengampuData: [],
+  formattedData: [],
   // State Filter & Search
   searchTerm: '',
   filterUnit: '',
@@ -99,30 +100,33 @@ const GuruModule = {
     if (resGuru.status === 'success') {
       this.data = resGuru.data;
       this.pengampuData = resPengampu.status === 'success' ? resPengampu.data : [];
-
-      const pengampuMap = {};
-      this.pengampuData.forEach(p => {
-        const valId = String(p.id_pengampu).trim();
-        pengampuMap[valId] = p.nama_pengampu 
-          ? `${p.nama_pengampu} (${p.level_yang_diampu})` 
-          : (p.level_yang_diampu || valId);
-      });
-
-      this.formattedData = this.data.map(g => {
-        const rawPengampuId = String(g.id_pengampu !== undefined ? g.id_pengampu : (g.pengampu || '')).trim();
-        return {
-          ...g,
-          id_pengampu: rawPengampuId,
-          display_pengampu: rawPengampuId ? (pengampuMap[rawPengampuId] || rawPengampuId) : 'Pusat / Mandiri',
-          tasmi: g.tasmi || 'Belum',
-          keterangan_hafalan: g.keterangan_hafalan || '-'
-        };
-      });
-
+      this.rebuildFormattedData();
       this.renderFilteredTable();
     } else {
       mainContent.innerHTML = `<div class="alert alert-danger">Gagal memuat data guru: ${resGuru.message || 'Terjadi kesalahan server'}</div>`;
     }
+  },
+
+  // Helper untuk format data tampilan
+  rebuildFormattedData: function() {
+    const pengampuMap = {};
+    this.pengampuData.forEach(p => {
+      const valId = String(p.id_pengampu).trim();
+      pengampuMap[valId] = p.nama_pengampu 
+        ? `${p.nama_pengampu} (${p.level_yang_diampu})` 
+        : (p.level_yang_diampu || valId);
+    });
+
+    this.formattedData = this.data.map(g => {
+      const rawPengampuId = String(g.id_pengampu !== undefined ? g.id_pengampu : (g.pengampu || '')).trim();
+      return {
+        ...g,
+        id_pengampu: rawPengampuId,
+        display_pengampu: rawPengampuId ? (pengampuMap[rawPengampuId] || rawPengampuId) : 'Pusat / Mandiri',
+        tasmi: g.tasmi || 'Belum',
+        keterangan_hafalan: g.keterangan_hafalan || '-'
+      };
+    });
   },
 
   // Logika Filter & Search Kombinasi
@@ -252,6 +256,7 @@ const GuruModule = {
     modal.show();
   },
 
+  // Simpan Mutasi Massal secara Instan di Memori Lokal
   saveMutasiMassal: async function(selectedIds) {
     const newLevel = document.getElementById('mutasi_level').value;
     const newPengampu = document.getElementById('mutasi_pengampu').value;
@@ -261,6 +266,11 @@ const GuruModule = {
       return;
     }
 
+    const saveBtn = document.getElementById('btn-save-modal');
+    const originalText = saveBtn.innerHTML;
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span> Memproses...`;
+
     const payload = {
       ids: selectedIds,
       level: newLevel,
@@ -268,11 +278,34 @@ const GuruModule = {
     };
 
     const res = await apiCall('POST', 'bulkMutasiGuru', payload);
-    alert(res.message);
+
+    saveBtn.disabled = false;
+    saveBtn.innerHTML = originalText;
 
     if (res.status === 'success') {
-      bootstrap.Modal.getInstance(document.getElementById('formModal')).hide();
-      this.loadData(true);
+      const modalEl = document.getElementById('formModal');
+      const modalInstance = bootstrap.Modal.getInstance(modalEl);
+      if (modalInstance) modalInstance.hide();
+
+      // Synchronize in-memory data directly
+      this.data.forEach(g => {
+        if (selectedIds.includes(String(g.id_guru))) {
+          if (newLevel) g.level = newLevel;
+          if (newPengampu !== "") {
+            g.id_pengampu = newPengampu;
+            g.pengampu = newPengampu;
+          }
+        }
+      });
+
+      if (typeof AppCache !== 'undefined' && AppCache.set) {
+        AppCache.set('getGuru', { status: 'success', data: this.data });
+      }
+
+      this.rebuildFormattedData();
+      this.renderFilteredTable();
+    } else {
+      alert(res.message || 'Gagal melakukan mutasi massal');
     }
   },
 
@@ -390,6 +423,7 @@ const GuruModule = {
     if (item) this.openModal(item);
   },
 
+  // Simpan Data Individual secara Instan (Memperbarui layar 0ms tanpa fetch ulang)
   saveData: async function(isEdit) {
     const idNum = document.getElementById('modal_id_guru_num').value.trim();
     if (!idNum) {
@@ -397,10 +431,11 @@ const GuruModule = {
       return;
     }
 
+    const fullId = `GUR-${idNum}`;
     const pengampuVal = document.getElementById('modal_pengampu').value;
 
     const payload = {
-      id_guru: `GUR-${idNum}`,
+      id_guru: fullId,
       nama_guru: document.getElementById('modal_nama_guru').value,
       unit: document.getElementById('modal_unit').value,
       level: document.getElementById('modal_level').value,
@@ -411,21 +446,59 @@ const GuruModule = {
       keterangan_hafalan: document.getElementById('modal_keterangan_hafalan').value
     };
 
+    const saveBtn = document.getElementById('btn-save-modal');
+    const originalText = saveBtn.innerHTML;
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span> Menyimpan...`;
+
     const action = isEdit ? 'updateGuru' : 'createGuru';
     const res = await apiCall('POST', action, payload);
-    alert(res.message);
+
+    saveBtn.disabled = false;
+    saveBtn.innerHTML = originalText;
 
     if (res.status === 'success') {
-      bootstrap.Modal.getInstance(document.getElementById('formModal')).hide();
-      this.loadData(true);
+      const modalEl = document.getElementById('formModal');
+      const modalInstance = bootstrap.Modal.getInstance(modalEl);
+      if (modalInstance) modalInstance.hide();
+
+      // Synchronize in-memory array directly
+      if (isEdit) {
+        const index = this.data.findIndex(d => String(d.id_guru) === fullId);
+        if (index !== -1) {
+          this.data[index] = { ...this.data[index], ...payload };
+        }
+      } else {
+        this.data.push(payload);
+      }
+
+      if (typeof AppCache !== 'undefined' && AppCache.set) {
+        AppCache.set('getGuru', { status: 'success', data: this.data });
+      }
+
+      this.rebuildFormattedData();
+      this.renderFilteredTable();
+    } else {
+      alert(res.message || 'Gagal menyimpan data');
     }
   },
 
+  // Hapus Data secara Instan dari Layar
   deleteData: async function(id_guru) {
     if (confirm(`Apakah Anda yakin ingin menghapus guru ID ${id_guru}?`)) {
       const res = await apiCall('POST', 'deleteGuru', { id_guru: id_guru });
-      alert(res.message);
-      if (res.status === 'success') this.loadData(true);
+      if (res.status === 'success') {
+        this.data = this.data.filter(d => String(d.id_guru) !== String(id_guru));
+        
+        if (typeof AppCache !== 'undefined' && AppCache.set) {
+          AppCache.set('getGuru', { status: 'success', data: this.data });
+        }
+
+        this.rebuildFormattedData();
+        this.renderFilteredTable();
+      } else {
+        alert(res.message || 'Gagal menghapus data');
+      }
     }
   },
 
