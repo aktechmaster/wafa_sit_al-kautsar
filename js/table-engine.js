@@ -14,15 +14,15 @@ const TableEngine = {
 
     const isAdmin = Auth.isAdmin();
 
-    // Container dengan scroll internal & header yang nempel (freeze) di atas saat di-scroll
+    // Container tabel dengan batas tinggi responsif sesuai layar
     let html = `
-      <div class="table-responsive shadow-sm rounded border bg-white" style="max-height: calc(100vh - 280px); overflow-y: auto;">
+      <div class="table-responsive shadow-sm rounded border bg-white" style="max-height: calc(100vh - 320px); overflow-y: auto; position: relative;">
         <table class="table table-striped table-hover m-0 align-middle">
-          <thead class="table-dark" style="position: sticky; top: 0; z-index: 10;">
+          <thead class="table-dark" style="position: sticky; top: 0; z-index: 5;">
             <tr>
-              ${enableCheckbox && isAdmin ? `<th style="width: 40px;" class="text-center"><input type="checkbox" class="form-check-input" id="check-all" onclick="GuruModule.toggleCheckAll(this)"></th>` : ''}
-              ${headers.map(h => `<th style="background-color: #212529; color: #fff;">${h.label}</th>`).join('')}
-              ${isAdmin ? `<th style="width: 120px; background-color: #212529; color: #fff;">Aksi</th>` : ''}
+              ${enableCheckbox && isAdmin ? `<th style="width: 40px; background-color: #212529; color: #fff; position: sticky; top: 0;" class="text-center"><input type="checkbox" class="form-check-input" id="check-all" onclick="GuruModule.toggleCheckAll(this)"></th>` : ''}
+              ${headers.map(h => `<th style="background-color: #212529; color: #fff; position: sticky; top: 0;">${h.label}</th>`).join('')}
+              ${isAdmin ? `<th style="width: 120px; background-color: #212529; color: #fff; position: sticky; top: 0;">Aksi</th>` : ''}
             </tr>
           </thead>
           <tbody>
