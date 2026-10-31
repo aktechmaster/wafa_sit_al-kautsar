@@ -50,34 +50,35 @@ const GuruModule = {
       `;
     }
 
-    // Panel Kotak Pencarian & Dropdown Filter
+    // Panel Kotak Pencarian, Dropdown Filter, & Indikator Total Data
     actionArea.innerHTML = `
       ${buttonsHtml}
-      <div class="card card-body bg-light mb-3 border-0 shadow-sm">
+      <div class="card card-body bg-light mb-2 border-0 shadow-sm p-2">
         <div class="row g-2 align-items-center">
-          <div class="col-md-4">
-            <div class="input-group">
+          <div class="col-md-3">
+            <div class="input-group input-group-sm">
               <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
               <input type="text" id="search-input" class="form-control" placeholder="Cari Nama / ID Guru / Hafalan..." oninput="GuruModule.handleSearch(this.value)">
             </div>
           </div>
           <div class="col-md-2">
-            <select id="filter-unit" class="form-select" onchange="GuruModule.handleFilterUnit(this.value)">
+            <select id="filter-unit" class="form-select form-select-sm" onchange="GuruModule.handleFilterUnit(this.value)">
               ${unitFilterOpts}
             </select>
           </div>
           <div class="col-md-2">
-            <select id="filter-level" class="form-select" onchange="GuruModule.handleFilterLevel(this.value)">
+            <select id="filter-level" class="form-select form-select-sm" onchange="GuruModule.handleFilterLevel(this.value)">
               ${levelFilterOpts}
             </select>
           </div>
           <div class="col-md-3">
-            <select id="filter-status" class="form-select" onchange="GuruModule.handleFilterStatus(this.value)">
+            <select id="filter-status" class="form-select form-select-sm" onchange="GuruModule.handleFilterStatus(this.value)">
               ${statusFilterOpts}
             </select>
           </div>
-          <div class="col-md-1 text-end">
-            <button class="btn btn-outline-secondary w-100" title="Reset Filter" onclick="GuruModule.resetFilters()">
+          <div class="col-md-2 text-end d-flex align-items-center justify-content-end gap-2">
+            <span id="data-counter-badge" class="badge bg-dark px-2 py-2 fw-semibold">Total: 0 Guru</span>
+            <button class="btn btn-sm btn-outline-secondary" title="Reset Filter" onclick="GuruModule.resetFilters()">
               <i class="bi bi-arrow-counterclockwise"></i>
             </button>
           </div>
@@ -145,6 +146,18 @@ const GuruModule = {
       return matchSearch && matchUnit && matchLevel && matchStatus;
     });
 
+    // Update Badge Total Data Guru secara Real-time
+    const badgeEl = document.getElementById('data-counter-badge');
+    if (badgeEl) {
+      if (filtered.length === this.data.length) {
+        badgeEl.textContent = `Total: ${this.data.length} Guru`;
+        badgeEl.className = 'badge bg-dark px-2 py-2 fw-semibold';
+      } else {
+        badgeEl.textContent = `Hasil: ${filtered.length} / ${this.data.length} Guru`;
+        badgeEl.className = 'badge bg-primary px-2 py-2 fw-semibold';
+      }
+    }
+
     const headers = [
       { label: 'ID Guru', key: 'id_guru' },
       { label: 'Nama Guru', key: 'nama_guru' },
@@ -202,7 +215,6 @@ const GuruModule = {
     checkboxes.forEach(cb => cb.checked = source.checked);
   },
 
-  // Fitur Hapus Massal Guru yang Dicentang
   deleteMassal: async function() {
     const selectedBoxes = document.querySelectorAll('.row-checkbox:checked');
     if (selectedBoxes.length === 0) {
@@ -212,11 +224,10 @@ const GuruModule = {
 
     const selectedIds = Array.from(selectedBoxes).map(cb => cb.value);
 
-    if (confirm(`Apakah Anda YAKIN ingin menghapus ${selectedIds.length} data guru yang dicentang? Data yang dihapus tidak dapat dikembalikan.`)) {
+    if (confirm(`Apakah Anda YAKIN ingin menghapus ${selectedIds.length} data guru yang dicentang?`)) {
       const res = await apiCall('POST', 'bulkDeleteGuru', { ids: selectedIds });
 
       if (res.status === 'success') {
-        // Synchronize in-memory data secara instan
         this.data = this.data.filter(d => !selectedIds.includes(String(d.id_guru)));
 
         if (typeof AppCache !== 'undefined' && AppCache.set) {
