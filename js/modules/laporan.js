@@ -5,14 +5,50 @@ const LaporanModule = {
   selectedPeriode: 'all',
   selectedPengampu: '',
 
-  // Helper untuk menentukan Tahun Akademik (misal: Jul 2026 & Jan 2027 -> 2026/2027)
-  getTahunAkademik: function(dateStr) {
-    if (!dateStr) return '';
-    const dt = new Date(dateStr);
-    const y = dt.getFullYear();
-    const m = dt.getMonth() + 1; // 1 - 12
-    if (isNaN(y)) return '';
+  // Helper Khusus Membaca Kolom B (Tanggal)
+  parseTanggalB: function(val) {
+    if (!val) return null;
+    
+    // Jika data berupa objek Date dari Google Sheets
+    if (val instanceof Date) {
+      return {
+        year: val.getFullYear(),
+        month: val.getMonth() + 1
+      };
+    }
+    
+    const str = String(val).trim();
+    // Jika format string YYYY-MM-DD atau YYYY/MM/DD (Contoh: 2026-11-07)
+    if (str.match(/^\d{4}[-\/]\d{2}[-\/]\d{2}/)) {
+      const parts = str.split(/[-\/]/);
+      return {
+        year: parseInt(parts[0], 10),
+        month: parseInt(parts[1], 10)
+      };
+    }
+    
+    // Fallback parsing tanggal umum
+    const dt = new Date(str);
+    if (!isNaN(dt.getTime())) {
+      return {
+        year: dt.getFullYear(),
+        month: dt.getMonth() + 1
+      };
+    }
+    
+    return null;
+  },
 
+  // Helper Menghitung Tahun Pelajaran (TP) dari Kolom B (Tanggal)
+  getTahunAkademik: function(dateVal) {
+    const parsed = this.parseTanggalB(dateVal);
+    if (!parsed) return '';
+    
+    const y = parsed.year;
+    const m = parsed.month;
+
+    // Juli (7) s.d. Desember (12) -> TP YYYY/YYYY+1
+    // Januari (1) s.d. Juni (6) -> TP YYYY-1/YYYY
     if (m >= 7) {
       return `${y}/${y + 1}`;
     } else {
@@ -23,7 +59,7 @@ const LaporanModule = {
   init: async function(forceFetch = false) {
     document.getElementById('page-title').textContent = 'Laporan Perkuliahan Wafa';
     
-    // Set Default Tahun Akademik Saat Ini (berdasarkan hari ini)
+    // Set Default Tahun Akademik berdasarkan tanggal hari ini
     this.selectedYear = this.getTahunAkademik(new Date());
 
     const container = document.getElementById('main-content');
@@ -54,13 +90,14 @@ const LaporanModule = {
   renderHeaderAndFilters: function() {
     const actionArea = document.getElementById('module-action-area');
 
-    // Dapatkan daftar Tahun Akademik unik dari data Tanggal
+    // Dapatkan daftar Tahun Akademik unik murni dari Kolom B (Tanggal)
     const tpSet = new Set();
     tpSet.add(this.selectedYear);
 
     this.rawJurnalData.forEach(row => {
-      if (row.Tanggal) {
-        const tp = this.getTahunAkademik(row.Tanggal);
+      const valTanggal = row['Tanggal'] || row['tanggal']; // Murni membaca Kolom B
+      if (valTanggal) {
+        const tp = this.getTahunAkademik(valTanggal);
         if (tp) tpSet.add(tp);
       }
     });
@@ -121,15 +158,18 @@ const LaporanModule = {
   renderReport: function() {
     const container = document.getElementById('main-content');
 
-    // Filter data berdasarkan Tahun Akademik & Triwulan
+    // Filter data berdasarkan Kolom B (Tanggal)
     const filteredRows = this.rawJurnalData.filter(row => {
-      if (!row.Tanggal) return false;
+      const valTanggal = row['Tanggal'] || row['tanggal']; // Murni membaca Kolom B (Tanggal)
+      if (!valTanggal) return false;
       
-      const rowTP = this.getTahunAkademik(row.Tanggal);
+      const parsed = this.parseTanggalB(valTanggal);
+      if (!parsed) return false;
+
+      const rowTP = this.getTahunAkademik(valTanggal);
       if (rowTP !== this.selectedYear) return false;
 
-      const dt = new Date(row.Tanggal);
-      const rowMonth = dt.getMonth() + 1; // 1 - 12
+      const rowMonth = parsed.month; // 1 - 12
 
       // Check Filter Periode Triwulan
       if (this.selectedPeriode === 'jul-sep' && !(rowMonth >= 7 && rowMonth <= 9)) return false;
