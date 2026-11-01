@@ -1,13 +1,31 @@
 const LaporanModule = {
   rawJurnalData: [],
   pengampuList: [],
-  selectedYear: new Date().getFullYear().toString(),
+  selectedYear: '',
   selectedPeriode: 'all',
   selectedPengampu: '',
+
+  // Helper untuk menentukan Tahun Akademik (misal: Jul 2026 & Jan 2027 -> 2026/2027)
+  getTahunAkademik: function(dateStr) {
+    if (!dateStr) return '';
+    const dt = new Date(dateStr);
+    const y = dt.getFullYear();
+    const m = dt.getMonth() + 1; // 1 - 12
+    if (isNaN(y)) return '';
+
+    if (m >= 7) {
+      return `${y}/${y + 1}`;
+    } else {
+      return `${y - 1}/${y}`;
+    }
+  },
 
   init: async function(forceFetch = false) {
     document.getElementById('page-title').textContent = 'Laporan Perkuliahan Wafa';
     
+    // Set Default Tahun Akademik Saat Ini (berdasarkan hari ini)
+    this.selectedYear = this.getTahunAkademik(new Date());
+
     const container = document.getElementById('main-content');
     container.innerHTML = `
       <div class="text-center py-5">
@@ -36,20 +54,19 @@ const LaporanModule = {
   renderHeaderAndFilters: function() {
     const actionArea = document.getElementById('module-action-area');
 
-    // Dapatkan daftar tahun unik dari data Tanggal
-    const yearsSet = new Set();
-    const currentYearStr = new Date().getFullYear().toString();
-    yearsSet.add(currentYearStr);
+    // Dapatkan daftar Tahun Akademik unik dari data Tanggal
+    const tpSet = new Set();
+    tpSet.add(this.selectedYear);
 
     this.rawJurnalData.forEach(row => {
       if (row.Tanggal) {
-        const y = new Date(row.Tanggal).getFullYear().toString();
-        if (!isNaN(y) && y.length === 4) yearsSet.add(y);
+        const tp = this.getTahunAkademik(row.Tanggal);
+        if (tp) tpSet.add(tp);
       }
     });
 
-    const yearsOptions = Array.from(yearsSet).sort((a,b) => b - a).map(y => 
-      `<option value="${y}" ${y === this.selectedYear ? 'selected' : ''}>Tahun ${y}</option>`
+    const yearsOptions = Array.from(tpSet).sort().reverse().map(tp => 
+      `<option value="${tp}" ${tp === this.selectedYear ? 'selected' : ''}>TP ${tp}</option>`
     ).join('');
 
     // Option Pengampu
@@ -63,7 +80,7 @@ const LaporanModule = {
       <div class="card card-body bg-light mb-3 border-0 shadow-sm p-3">
         <div class="row g-2 align-items-center">
           <div class="col-md-3">
-            <label class="form-label small fw-bold mb-1">Tahun Akademik</label>
+            <label class="form-label small fw-bold mb-1">Tahun Pelajaran (TP)</label>
             <select id="filter-laporan-tahun" class="form-select form-select-sm" onchange="LaporanModule.handleFilterChange()">
               ${yearsOptions}
             </select>
@@ -71,7 +88,7 @@ const LaporanModule = {
           <div class="col-md-3">
             <label class="form-label small fw-bold mb-1">Periode Triwulan</label>
             <select id="filter-laporan-periode" class="form-select form-select-sm" onchange="LaporanModule.handleFilterChange()">
-              <option value="all" ${this.selectedPeriode === 'all' ? 'selected' : ''}>Semua Periode (1 Tahun)</option>
+              <option value="all" ${this.selectedPeriode === 'all' ? 'selected' : ''}>Semua Periode (1 TP)</option>
               <option value="jul-sep" ${this.selectedPeriode === 'jul-sep' ? 'selected' : ''}>Juli – September (Triwulan 1)</option>
               <option value="okt-des" ${this.selectedPeriode === 'okt-des' ? 'selected' : ''}>Oktober – Desember (Triwulan 2)</option>
               <option value="jan-mar" ${this.selectedPeriode === 'jan-mar' ? 'selected' : ''}>Januari – Maret (Triwulan 3)</option>
@@ -104,17 +121,17 @@ const LaporanModule = {
   renderReport: function() {
     const container = document.getElementById('main-content');
 
-    // 1. Filter raw data berdasarkan periode & pengampu
+    // Filter data berdasarkan Tahun Akademik & Triwulan
     const filteredRows = this.rawJurnalData.filter(row => {
       if (!row.Tanggal) return false;
       
+      const rowTP = this.getTahunAkademik(row.Tanggal);
+      if (rowTP !== this.selectedYear) return false;
+
       const dt = new Date(row.Tanggal);
-      const rowYear = dt.getFullYear().toString();
-      const rowMonth = dt.getMonth() + 1;
+      const rowMonth = dt.getMonth() + 1; // 1 - 12
 
-      if (rowYear !== this.selectedYear) return false;
-
-      // Check Filter Periode
+      // Check Filter Periode Triwulan
       if (this.selectedPeriode === 'jul-sep' && !(rowMonth >= 7 && rowMonth <= 9)) return false;
       if (this.selectedPeriode === 'okt-des' && !(rowMonth >= 10 && rowMonth <= 12)) return false;
       if (this.selectedPeriode === 'jan-mar' && !(rowMonth >= 1 && rowMonth <= 3)) return false;
@@ -126,7 +143,7 @@ const LaporanModule = {
       return true;
     });
 
-    // 2. Agregasi per Guru
+    // Agregasi per Guru
     const guruMap = {};
     let grandHadir = 0, grandSakit = 0, grandIzin = 0, grandAlpha = 0;
 
@@ -162,10 +179,10 @@ const LaporanModule = {
     const grandTotal = grandHadir + grandSakit + grandIzin + grandAlpha;
     const avgPct = grandTotal > 0 ? Math.round((grandHadir / grandTotal) * 100) : 0;
 
-    // 3. Render Widget & Tabel
+    // Render Widget & Tabel
     let tableRows = '';
     if (reportList.length === 0) {
-      tableRows = `<tr><td colspan="8" class="text-center py-4 text-muted">Tidak ada data presensi pada periode ini.</td></tr>`;
+      tableRows = `<tr><td colspan="8" class="text-center py-4 text-muted">Tidak ada data presensi pada TP ${this.selectedYear} ini.</td></tr>`;
     } else {
       tableRows = reportList.map((g, idx) => {
         let badgeClass = 'bg-success';
@@ -218,11 +235,11 @@ const LaporanModule = {
         </div>
       </div>
 
-      <!-- Tabel Laporan Rekapitulasi (Dengan margin bawah mb-5 pb-3 & max-height 440px) -->
+      <!-- Tabel Laporan Rekapitulasi -->
       <div class="card border-0 shadow-sm mb-5 pb-3">
         <div class="card-header bg-white py-3 border-bottom-0">
           <h6 class="m-0 fw-bold text-secondary">
-            <i class="bi bi-table me-2 text-primary"></i>Rekapitulasi Kehadiran Guru Wafa
+            <i class="bi bi-table me-2 text-primary"></i>Rekapitulasi Kehadiran Guru Wafa (TP ${this.selectedYear})
           </h6>
         </div>
         <div class="table-responsive" style="max-height: 440px; overflow-y: auto;">
@@ -271,6 +288,6 @@ const LaporanModule = {
     const worksheet = XLSX.utils.json_to_sheet(exportData);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Laporan Perkuliahan");
-    XLSX.writeFile(workbook, `Laporan_Perkuliahan_Wafa_${this.selectedYear}_${this.selectedPeriode}.xlsx`);
+    XLSX.writeFile(workbook, `Laporan_Perkuliahan_Wafa_TP_${this.selectedYear.replace('/','-')}_${this.selectedPeriode}.xlsx`);
   }
 };
