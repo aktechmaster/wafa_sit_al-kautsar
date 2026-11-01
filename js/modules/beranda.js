@@ -107,7 +107,7 @@ const BerandaModule = {
             <div class="card stat-card card-teal p-3 shadow-sm border-0">
               <div class="d-flex justify-content-between align-items-center">
                 <div>
-                  <div class="card-title text-white-50 small fw-semibold">LEVEL PENGAMPU</div>
+                  <div class="card-title text-white-50 small fw-semibold">PENGAMPU</div>
                   <div class="card-value fs-2 fw-bold text-white">${dataOverview.totalPengampu || 0}</div>
                 </div>
                 <i class="bi bi-book-fill fs-1 text-white opacity-50"></i>
