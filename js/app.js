@@ -34,6 +34,9 @@ function loadModule(moduleName, forceFetch = false) {
     case 'pengampu':
       PengampuModule.init(forceFetch);
       break;
+    case 'laporan':
+      LaporanModule.init(forceFetch);
+      break;
     case 'users':
       UsersModule.init(forceFetch);
       break;
