@@ -110,7 +110,7 @@ const LaporanModule = {
       
       const dt = new Date(row.Tanggal);
       const rowYear = dt.getFullYear().toString();
-      const rowMonth = dt.getMonth() + 1; // 1 - 12
+      const rowMonth = dt.getMonth() + 1;
 
       if (rowYear !== this.selectedYear) return false;
 
@@ -162,7 +162,7 @@ const LaporanModule = {
     const grandTotal = grandHadir + grandSakit + grandIzin + grandAlpha;
     const avgPct = grandTotal > 0 ? Math.round((grandHadir / grandTotal) * 100) : 0;
 
-    // 3. Render Widget & Tabel (dengan Scrollbar Vertikal)
+    // 3. Render Widget & Tabel
     let tableRows = '';
     if (reportList.length === 0) {
       tableRows = `<tr><td colspan="8" class="text-center py-4 text-muted">Tidak ada data presensi pada periode ini.</td></tr>`;
@@ -218,14 +218,14 @@ const LaporanModule = {
         </div>
       </div>
 
-      <!-- Tabel Laporan Rekapitulasi (Scrollbar Vertikal + Sticky Header) -->
-      <div class="card border-0 shadow-sm">
+      <!-- Tabel Laporan Rekapitulasi (Dengan margin bawah mb-5 pb-3 & max-height 440px) -->
+      <div class="card border-0 shadow-sm mb-5 pb-3">
         <div class="card-header bg-white py-3 border-bottom-0">
           <h6 class="m-0 fw-bold text-secondary">
             <i class="bi bi-table me-2 text-primary"></i>Rekapitulasi Kehadiran Guru Wafa
           </h6>
         </div>
-        <div class="table-responsive" style="max-height: 520px; overflow-y: auto;">
+        <div class="table-responsive" style="max-height: 440px; overflow-y: auto;">
           <table class="table table-hover align-middle m-0">
             <thead class="table-dark" style="position: sticky; top: 0; z-index: 10;">
               <tr>
@@ -247,7 +247,6 @@ const LaporanModule = {
       </div>
     `;
 
-    // Simpan hasil agregasi untuk fitur export
     this.currentReportList = reportList;
   },
 
