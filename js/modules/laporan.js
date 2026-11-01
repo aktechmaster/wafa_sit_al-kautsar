@@ -162,7 +162,7 @@ const LaporanModule = {
     const grandTotal = grandHadir + grandSakit + grandIzin + grandAlpha;
     const avgPct = grandTotal > 0 ? Math.round((grandHadir / grandTotal) * 100) : 0;
 
-    // 3. Render Widget & Tabel
+    // 3. Render Widget & Tabel (dengan Scrollbar Vertikal)
     let tableRows = '';
     if (reportList.length === 0) {
       tableRows = `<tr><td colspan="8" class="text-center py-4 text-muted">Tidak ada data presensi pada periode ini.</td></tr>`;
@@ -211,23 +211,23 @@ const LaporanModule = {
           </div>
         </div>
         <div class="col-md-3">
-          <div class="card border-0 shadow-sm bg-teal text-white p-3" style="background-color: #0d9488;">
+          <div class="card border-0 shadow-sm text-white p-3" style="background-color: #0d9488;">
             <div class="card-title small opacity-75">RATA-RATA KEHADIRAN</div>
             <div class="fs-2 fw-bold">${avgPct}%</div>
           </div>
         </div>
       </div>
 
-      <!-- Tabel Laporan Rekapitulasi -->
+      <!-- Tabel Laporan Rekapitulasi (Scrollbar Vertikal + Sticky Header) -->
       <div class="card border-0 shadow-sm">
-        <div class="card-header bg-white py-3">
+        <div class="card-header bg-white py-3 border-bottom-0">
           <h6 class="m-0 fw-bold text-secondary">
             <i class="bi bi-table me-2 text-primary"></i>Rekapitulasi Kehadiran Guru Wafa
           </h6>
         </div>
-        <div class="table-responsive">
+        <div class="table-responsive" style="max-height: 520px; overflow-y: auto;">
           <table class="table table-hover align-middle m-0">
-            <thead class="table-dark">
+            <thead class="table-dark" style="position: sticky; top: 0; z-index: 10;">
               <tr>
                 <th class="text-center" style="width: 50px;">No</th>
                 <th>Nama Guru</th>
